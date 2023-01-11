@@ -1,0 +1,162 @@
+package org.example;
+
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.nio.dot.DOTExporter;
+
+import java.io.File;
+import java.io.IOException;
+import java.rmi.server.ExportException;
+
+
+
+class demo {
+    public static class Node {
+        int key;
+        Node next;
+        Node(int key, Node next) {
+            this.key = key;
+            this.next = next;
+        }
+    }
+
+    public static class CompleteBinaryTree {
+        Node root;
+        int size() {
+            int count = 0;
+            Node curr = root;
+            while (curr != null) {
+                count++;
+                curr = curr.next;
+            }
+            return count;
+        }
+
+        // 获取父节点
+        Node getParent(int i) {
+            if (i == 0) return null;
+            return getNode(i / 2);
+        }
+
+        // 获取左子节点
+        Node getLeftChild(int i) {
+            return getNode(2 * i + 1);
+        }
+
+        // 获取右子节点
+        Node getRightChild(int i) {
+            return getNode(2 * i + 2);
+        }
+
+        // 根据索引获取节点
+        Node getNode(int i) {
+            Node curr = root;
+            for (int j = 0; j < i && curr != null; j++) {
+                curr = curr.next;
+            }
+            return curr;
+        }
+    }
+
+    public static class MinPriorityQueue {
+        CompleteBinaryTree tree;
+
+        // 插入元素
+        void insert(int key) {
+            Node newNode = new Node(key, null);
+            if (tree.root == null) {
+                tree.root = newNode;
+                return;
+            }
+            Node curr = tree.getNode(0);
+            while (curr.next != null) {
+                curr = curr.next;
+            }
+            curr.next = newNode;
+
+            // 上浮操作
+            int i = tree.size() - 1;
+            while (i > 0 && tree.getParent(i).key > tree.getNode(i).key) {
+                int temp = tree.getParent(i).key;
+                tree.getParent(i).key = tree.getNode(i).key;
+                tree.getNode(i).key = temp;
+                i = (i - 1) / 2;
+            }
+        }
+
+        // 删除最小元素
+        int delMin() {
+            if (tree.root == null) {
+                throw new RuntimeException("The queue is empty.");
+            }
+            int min = tree.root.key;
+            tree.root.key = tree.getNode(tree.size() - 1).key;
+            tree.getNode(tree.size() - 1).key = 0; // 删除最后一个节点
+
+            // 下沉操作
+            int i = 0;
+            while (i < tree.size() / 2) {
+                int j = 2 * i + 1;
+                if (j < tree.size() - 1 && tree.getNode(j).key > tree.getNode(j + 1).key) {
+                    j++;
+                }
+                if (tree.getNode(i).key <= tree.getNode(j).key) {
+                    break;
+                }
+                int temp = tree.getNode(i).key;
+                tree.getNode(i).key = tree.getNode(j).key;
+                tree.getNode(j).key = temp;
+                i = j;
+            }
+            return min;
+        }
+    }
+// 测试性能程序
+//    public static void main(String[] args) {
+//        MinPriorityQueue queue = new MinPriorityQueue();
+//        queue.tree = new CompleteBinaryTree();
+//        int n = 100000;
+//        long start = System.nanoTime();
+//        for (int i = 0; i < n; i++) {
+//            queue.insert(i);
+//        }
+//        long end = System.nanoTime();
+//        long elapsed = end - start;
+//        System.out.println("Elapsed time for inserting " + n + " elements: " + elapsed + " nanoseconds.");
+//    }
+
+    public static void main(String[] args) throws ExportException, IOException {
+        Graph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
+
+        MinPriorityQueue queue = new MinPriorityQueue();
+        queue.tree = new CompleteBinaryTree();
+        queue.insert(5);
+        queue.insert(3);
+        queue.insert(7);
+        queue.insert(1);
+        queue.insert(9);
+
+        // 添加节点
+        for (int i = 0; i < queue.tree.size(); i++) {
+            graph.addVertex(Integer.toString(i));
+        }
+
+        // 添加边
+        for (int i = 0; i < queue.tree.size(); i++) {
+            Node parent = queue.tree.getParent(i);
+            if (parent != null) {
+                //graph.addEdge(Integer.toString(i), Integer.toString((i - 1) / 2));
+                graph.addEdge(Integer.toString((i - 1) / 2), Integer.toString(i));
+
+            }
+        }
+
+        // 导出图片
+        DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
+        exporter.exportGraph(graph, new File("heap.dot"));
+    }
+}
+
+
+
